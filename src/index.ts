@@ -1,6 +1,2 @@
-import { foo } from './sub'
-
-export function main(): string {
-    foo()
-    return 'yay'
-}
+export * from './lib'
+export * from './plugins'
