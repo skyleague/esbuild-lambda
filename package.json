@@ -1,5 +1,6 @@
 {
   "name": "@skyleague/esbuild-lambda",
+  "version": "1.0.0",
   "description": "",
   "license": "MIT",
   "main": ".main.js",
@@ -11,7 +12,13 @@
   "engines": {
     "node": ">=14"
   },
-  "files": [".main.js", ".main.js.map", "index.d.ts", "src/**/*.d.ts", "package.json"],
+  "files": [
+    ".main.js",
+    ".main.js.map",
+    "index.d.ts",
+    "src/**/*.d.ts",
+    "package.json"
+  ],
   "scripts": {
     "build": "npx ts-node esbuild.config.ts",
     "build:clean": "npx tsc --build --clean && rm .main.js && rm .main.js.map",
@@ -30,6 +37,8 @@
     "test": "npx jest"
   },
   "dependencies": {
+    "@skyleague/axioms": "^1.1.0",
+    "esbuild": "^0.15.5",
     "tslib": "^2.4.0"
   },
   "devDependencies": {
