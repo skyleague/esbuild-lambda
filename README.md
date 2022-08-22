@@ -59,7 +59,3 @@ In this basic configuration, the `listLambdaHandlers` will search for all the `i
 ## License
 
 `@skyleague/esbuild-lambda` is [MIT licensed](./LICENSE).
-
-```
-
-```
