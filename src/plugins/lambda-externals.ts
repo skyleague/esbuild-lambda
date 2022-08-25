@@ -39,22 +39,16 @@ export function lambdaExternalsPlugin({ root, packageJson }: { root: string; pac
                 for (const artifactDir of new Set(
                     Object.keys(result.metafile?.outputs ?? {}).map((f) => path.dirname(path.join(root, f)))
                 )) {
+                    const lambdaPackageJson = {
+                        ...packageJson,
+                        devDependencies: undefined,
+                        scripts: undefined,
+                        files: undefined,
+                        dependencies: externals,
+                    }
                     await Promise.all([
                         // Write the newly generated package with narrow `externals` as dependencies
-                        fs.promises.writeFile(
-                            path.join(artifactDir, 'package.json'),
-                            JSON.stringify(
-                                {
-                                    ...packageJson,
-                                    devDependencies: undefined,
-                                    scripts: undefined,
-                                    files: undefined,
-                                    dependencies: externals,
-                                },
-                                null,
-                                2
-                            )
-                        ),
+                        fs.promises.writeFile(path.join(artifactDir, 'package.json'), JSON.stringify(lambdaPackageJson, null, 2)),
                         // copy the lockfile for extra safety
                         fs.promises.copyFile(path.join(root, 'package-lock.json'), path.join(artifactDir, 'package-lock.json')),
                     ])
@@ -65,10 +59,34 @@ export function lambdaExternalsPlugin({ root, packageJson }: { root: string; pac
                         p.on('error', reject)
                     })
 
-                    // HOTFIX: remove aws-sdk that might have transitively been included
-                    await fs.promises
-                        .rm(path.join(artifactDir, 'node_modules', 'aws-sdk'), { recursive: true, force: true })
-                        .catch(() => void {})
+                    const awsSdkDir = path.join(artifactDir, 'node_modules', 'aws-sdk')
+                    if (
+                        await fs.promises
+                            .stat(awsSdkDir)
+                            .then(() => true)
+                            .catch(() => false)
+                    ) {
+                        await fs.promises.writeFile(
+                            path.join(artifactDir, 'package.json'),
+                            JSON.stringify(
+                                {
+                                    ...lambdaPackageJson,
+                                    overrides: {
+                                        'aws-sdk': './__non_existing__',
+                                    },
+                                },
+                                null,
+                                2
+                            )
+                        )
+                        // HOTFIX: remove aws-sdk that might have transitively been included
+                        await new Promise((resolve, reject) => {
+                            const p = child_process.exec('npm i --cache', { cwd: artifactDir }, (err, stdout) =>
+                                err ? reject(err) : resolve(stdout)
+                            )
+                            p.on('error', reject)
+                        })
+                    }
                 }
             })
         },
