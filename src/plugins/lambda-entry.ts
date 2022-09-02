@@ -13,7 +13,10 @@ export const lambdaEntryPlugin: Plugin = {
         })
         compiler.onLoad({ filter, namespace }, (args) => {
             return {
-                contents: `export { handler } from '${args.path}'`,
+                contents: [
+                    `try { require('source-map-support').install() } catch (err) {}`,
+                    `export { handler } from '${args.path}'`,
+                ].join('\n'),
                 loader: 'ts',
             }
         })

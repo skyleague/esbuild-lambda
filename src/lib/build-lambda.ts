@@ -39,8 +39,10 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
             ...(options.plugins?.post ?? []),
         ],
         entryPoints: [options.entryPoint?.(fnDir) ?? path.join(fnDir, `index.ts`)],
-        external:
-            options.externals?.(packageJson) ?? Object.keys({ ...packageJson.dependencies, ...packageJson.devDependencies }),
+        external: [
+            ...(options.externals?.(packageJson) ?? Object.keys({ ...packageJson.dependencies, ...packageJson.devDependencies })),
+            'source-map-support',
+        ],
         outdir: options.outdir?.({ fnDir, root }) ?? path.join(fnDir, '.build/artifacts'),
     })
     console.timeEnd(`${path.relative(root, fnDir)}\ntotal`)
