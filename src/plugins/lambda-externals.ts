@@ -16,7 +16,10 @@ export function lambdaExternalsPlugin({ root, packageJson }: { root: string; pac
     return {
         name: 'lambda-externals',
         setup: (compiler) => {
-            const externals: Record<string, string> = {}
+            const externals: Record<string, string> = {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-var-requires
+                'source-map-support': require('source-map-support/package.json').version,
+            }
 
             compiler.onResolve({ namespace: 'file', filter: /.*/ }, (args) => {
                 if (args.path.startsWith('.')) {
