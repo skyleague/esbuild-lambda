@@ -9,7 +9,7 @@ import path from 'path'
 interface BuildLambdaOptions {
     root: string
     outdir?: (context: { fnDir: string; root: string }) => string
-    externals?: (packageJson: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> }) => string[]
+    forceBundle?: (input: { packageName: string; path: string }) => boolean
     entryPoint?: (fnDir: string) => string
     plugins?: {
         pre?: Plugin[]
@@ -39,10 +39,6 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
             ...(options.plugins?.post ?? []),
         ],
         entryPoints: [options.entryPoint?.(fnDir) ?? path.join(fnDir, `index.ts`)],
-        external: [
-            ...(options.externals?.(packageJson) ?? Object.keys({ ...packageJson.dependencies, ...packageJson.devDependencies })),
-            'source-map-support',
-        ],
         outdir: options.outdir?.({ fnDir, root }) ?? path.join(fnDir, '.build/artifacts'),
     })
     console.timeEnd(`${path.relative(root, fnDir)}\ntotal`)
