@@ -12,7 +12,15 @@ function determinePackageName(fullPath: string): string {
     return split[0]
 }
 
-export function lambdaExternalsPlugin({ root, packageJson }: { root: string; packageJson: Record<string, unknown> }): Plugin {
+export function lambdaExternalsPlugin({
+    root,
+    packageJson,
+    forceBundle,
+}: {
+    root: string
+    packageJson: Record<string, unknown>
+    forceBundle?: (input: { packageName: string; path: string }) => boolean
+}): Plugin {
     return {
         name: 'lambda-externals',
         setup: (compiler) => {
@@ -32,11 +40,15 @@ export function lambdaExternalsPlugin({ root, packageJson }: { root: string; pac
                     // this detects node built-in libraries like fs, path, etc, we don't need to add those to the package.json
                     return null
                 }
+                if (forceBundle?.({ packageName, path: args.path }) === true) {
+                    // forceBundled dependencies will not be marked as external
+                    return null
+                }
 
                 // Finally, it it's NEITHER a relative import NOR a node built-in libary, determine the relevant version for the Lambda handler
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-var-requires
                 externals[packageName] = require(`${packageName}/package.json`).version
-                return null
+                return { path: args.path, external: true }
             })
             compiler.onEnd(async (result) => {
                 for (const artifactDir of new Set(
