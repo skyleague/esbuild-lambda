@@ -19,7 +19,7 @@ export function lambdaExternalsPlugin({
 }: {
     root: string
     packageJson: Record<string, unknown>
-    forceBundle?: (input: { packageName: string; path: string }) => boolean
+    forceBundle: ((input: { packageName: string; path: string }) => boolean) | undefined
 }): Plugin {
     return {
         name: 'lambda-externals',
@@ -43,6 +43,10 @@ export function lambdaExternalsPlugin({
                 if (forceBundle?.({ packageName, path: args.path }) === true) {
                     // forceBundled dependencies will not be marked as external
                     return null
+                }
+                if (packageName === 'aws-sdk') {
+                    // forcefully mark aws-sdk as external
+                    return { path: args.path, external: true }
                 }
 
                 // Finally, it it's NEITHER a relative import NOR a node built-in libary, determine the relevant version for the Lambda handler
