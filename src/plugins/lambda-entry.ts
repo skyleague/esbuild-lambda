@@ -1,5 +1,7 @@
 import type { Plugin } from 'esbuild'
 
+import path from 'path'
+
 export const lambdaEntryPlugin: Plugin = {
     name: 'lambda-entry-loader',
     setup: (compiler) => {
@@ -9,7 +11,7 @@ export const lambdaEntryPlugin: Plugin = {
             if (args.kind === 'entry-point') {
                 return { path: args.path, namespace }
             }
-            return { path: args.path }
+            return { path: path.resolve(path.resolve(args.resolveDir, args.path)) }
         })
         compiler.onLoad({ filter, namespace }, (args) => {
             return {
