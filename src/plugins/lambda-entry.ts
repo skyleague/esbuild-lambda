@@ -11,7 +11,7 @@ export const lambdaEntryPlugin: Plugin = {
             if (args.kind === 'entry-point') {
                 return { path: args.path, namespace }
             }
-            return { path: path.resolve(path.resolve(args.resolveDir, args.path)) }
+            return { path: require.resolve(path.resolve(args.resolveDir, args.path)) }
         })
         compiler.onLoad({ filter, namespace }, (args) => {
             return {
