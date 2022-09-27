@@ -11,6 +11,12 @@ interface BuildLambdaOptions {
     outdir?: (context: { fnDir: string; root: string }) => string
     forceBundle?: (input: { packageName: string; path: string }) => boolean
     entryPoint?: (fnDir: string) => string
+    lambdaEntry?: {
+        features?: {
+            xray?: boolean
+            sourceMapSupport?: boolean
+        }
+    }
     plugins?: {
         pre?: Plugin[]
         post?: Plugin[]
@@ -34,7 +40,7 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
         plugins: [
             ...(options.plugins?.pre ?? []),
             jsonPlugin,
-            lambdaEntryPlugin,
+            lambdaEntryPlugin(options.lambdaEntry?.features),
             lambdaExternalsPlugin({ root, packageJson, forceBundle }),
             ...(options.plugins?.post ?? []),
         ],
