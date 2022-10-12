@@ -1,8 +1,9 @@
 {
   "name": "@skyleague/esbuild-lambda",
   "version": "1.0.0",
-  "description": "",
+  "description": "Building artifacts that are packageable for deployment to AWS Lambda.",
   "license": "MIT",
+  "author": "SkyLeague Technologies B.V. <technologies@skyleague.io> (https://skyleague.io)",
   "main": ".main.js",
   "types": "index.d.ts",
   "sideEffects": false,
