@@ -8,6 +8,7 @@ import path from 'path'
 
 interface BuildLambdaOptions {
     root: string
+    awsSdkV3?: true
     outdir?: (context: { fnDir: string; root: string }) => string
     forceBundle?: (input: { packageName: string; path: string }) => boolean
     entryPoint?: (fnDir: string) => string
@@ -41,7 +42,12 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
             ...(options.plugins?.pre ?? []),
             jsonPlugin,
             lambdaEntryPlugin(options.lambdaEntry?.features),
-            lambdaExternalsPlugin({ root, packageJson, forceBundle }),
+            lambdaExternalsPlugin({
+                root,
+                packageJson,
+                forceBundle,
+                awsSdkV3: options.awsSdkV3 ?? false,
+            }),
             ...(options.plugins?.post ?? []),
         ],
         entryPoints: [options.entryPoint?.(fnDir) ?? path.join(fnDir, `index.ts`)],
