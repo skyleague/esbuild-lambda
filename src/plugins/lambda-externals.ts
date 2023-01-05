@@ -15,10 +15,12 @@ function determinePackageName(fullPath: string): string {
 export function lambdaExternalsPlugin({
     root,
     packageJson,
+    awsSdkV3,
     forceBundle,
 }: {
     root: string
     packageJson: Record<string, unknown>
+    awsSdkV3: boolean
     forceBundle: ((input: { packageName: string; path: string }) => boolean) | undefined
 }): Plugin {
     return {
@@ -44,9 +46,16 @@ export function lambdaExternalsPlugin({
                     // forceBundled dependencies will not be marked as external
                     return null
                 }
-                if (packageName === 'aws-sdk') {
-                    // forcefully mark aws-sdk as external
-                    return { path: args.path, external: true }
+                if (awsSdkV3) {
+                    if (packageName.startsWith('@aws-sdk/')) {
+                        // forcefully mark @aws-sdk/* as external
+                        return { path: args.path, external: true }
+                    }
+                } else {
+                    if (packageName === 'aws-sdk') {
+                        // forcefully mark aws-sdk as external
+                        return { path: args.path, external: true }
+                    }
                 }
 
                 // Finally, it it's NEITHER a relative import NOR a node built-in libary, determine the relevant version for the Lambda handler
@@ -78,33 +87,35 @@ export function lambdaExternalsPlugin({
                         p.on('error', reject)
                     })
 
-                    const awsSdkDir = path.join(artifactDir, 'node_modules', 'aws-sdk')
-                    if (
-                        await fs.promises
-                            .stat(awsSdkDir)
-                            .then(() => true)
-                            .catch(() => false)
-                    ) {
-                        await fs.promises.writeFile(
-                            path.join(artifactDir, 'package.json'),
-                            JSON.stringify(
-                                {
-                                    ...lambdaPackageJson,
-                                    overrides: {
-                                        'aws-sdk': './__non_existing__',
+                    if (!awsSdkV3) {
+                        const awsSdkDir = path.join(artifactDir, 'node_modules', 'aws-sdk')
+                        if (
+                            await fs.promises
+                                .stat(awsSdkDir)
+                                .then(() => true)
+                                .catch(() => false)
+                        ) {
+                            await fs.promises.writeFile(
+                                path.join(artifactDir, 'package.json'),
+                                JSON.stringify(
+                                    {
+                                        ...lambdaPackageJson,
+                                        overrides: {
+                                            'aws-sdk': './__non_existing__',
+                                        },
                                     },
-                                },
-                                null,
-                                2
+                                    null,
+                                    2
+                                )
                             )
-                        )
-                        // HOTFIX: remove aws-sdk that might have transitively been included
-                        await new Promise((resolve, reject) => {
-                            const p = child_process.exec('npm i --cache', { cwd: artifactDir }, (err, stdout) =>
-                                err ? reject(err) : resolve(stdout)
-                            )
-                            p.on('error', reject)
-                        })
+                            // HOTFIX: remove aws-sdk that might have transitively been included
+                            await new Promise((resolve, reject) => {
+                                const p = child_process.exec('npm i --cache', { cwd: artifactDir }, (err, stdout) =>
+                                    err ? reject(err) : resolve(stdout)
+                                )
+                                p.on('error', reject)
+                            })
+                        }
                     }
                 }
             })
