@@ -1,7 +1,5 @@
 import type { Plugin } from 'esbuild'
 
-import path from 'path'
-
 export const lambdaEntryPlugin: (features?: { sourceMapSupport?: boolean; xray?: boolean }) => Plugin = (
     features = { xray: true, sourceMapSupport: true }
 ) => ({
@@ -13,7 +11,7 @@ export const lambdaEntryPlugin: (features?: { sourceMapSupport?: boolean; xray?:
             if (args.kind === 'entry-point') {
                 return { path: args.path, namespace }
             }
-            return { path: require.resolve(path.resolve(args.resolveDir, args.path)) }
+            return { path: require.resolve(args.path, { paths: [args.resolveDir] }) }
         })
         compiler.onLoad({ filter, namespace }, (args) => {
             return {
