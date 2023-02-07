@@ -5,7 +5,7 @@ export const lambdaEntryPlugin: (features?: { sourceMapSupport?: boolean; xray?:
 ) => ({
     name: 'lambda-entry-loader',
     setup: (compiler) => {
-        const filter = /.tsx?$/
+        const filter = /\.tsx?$/
         const namespace = 'lambda-entry'
         compiler.onResolve({ filter }, (args) => {
             if (args.kind === 'entry-point') {
