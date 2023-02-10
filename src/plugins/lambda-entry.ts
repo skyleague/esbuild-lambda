@@ -18,14 +18,14 @@ export const lambdaEntryPlugin: (features?: { sourceMapSupport?: boolean; xray?:
                 contents: [
                     ...(features?.xray ?? true
                         ? [
-                              // Before doing anything, attempt to initiate the HTTPs capture
-                              `try { new require('@aws-lambda-powertools/tracer').Tracer({ captureHTTPsRequests: true }) } catch (err) {}`,
-                          ]
+                            // Before doing anything, attempt to initiate the HTTPs capture
+                            `try { new require('@aws-lambda-powertools/tracer').Tracer({ captureHTTPsRequests: true }) } catch (err) {}`,
+                        ]
                         : []),
                     ...(features?.sourceMapSupport ?? true
                         ? [`try { require('source-map-support').install() } catch (err) {}`]
                         : []),
-                    `export { handler } from '${args.path}'`,
+                    `export { handler } from '${args.path.replaceAll('\\', '\\\\')}'`,
                 ].join('\n'),
                 loader: 'ts',
             }
