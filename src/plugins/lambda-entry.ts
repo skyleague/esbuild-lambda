@@ -16,13 +16,13 @@ export const lambdaEntryPlugin: (features?: { sourceMapSupport?: boolean; xray?:
         compiler.onLoad({ filter, namespace }, (args) => {
             return {
                 contents: [
-                    ...(features?.xray ?? true
+                    ...(features.xray ?? true
                         ? [
-                            // Before doing anything, attempt to initiate the HTTPs capture
-                            `try { new require('@aws-lambda-powertools/tracer').Tracer({ captureHTTPsRequests: true }) } catch (err) {}`,
-                        ]
+                              // Before doing anything, attempt to initiate the HTTPs capture
+                              `try { new require('@aws-lambda-powertools/tracer').Tracer({ captureHTTPsRequests: true }) } catch (err) {}`,
+                          ]
                         : []),
-                    ...(features?.sourceMapSupport ?? true
+                    ...(features.sourceMapSupport ?? true
                         ? [`try { require('source-map-support').install() } catch (err) {}`]
                         : []),
                     `export { handler } from '${args.path.replaceAll('\\', '\\\\')}'`,
