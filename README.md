@@ -24,7 +24,10 @@ Let's get started with a simple example:
 // esbuild.config.ts
 import { listLambdaHandlers, esbuildLambda } from '@skyleague/esbuild-lambda'
 
-import path from 'path'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 async function main() {
     const handlers = await listLambdaHandlers(path.join(__dirname, 'src', 'functions'))
@@ -72,7 +75,6 @@ If you using this SDK without Enterprise Support, please note this (partial) MIT
 
 > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND
 
-Copyright (c) 2022, SkyLeague Technologies B.V..
-'SkyLeague' and the astronaut logo are trademarks of SkyLeague Technologies, registered at Chamber of Commerce in The Netherlands under number 86650564.
+Copyright (c) 2022, SkyLeague Technologies B.V.. 'SkyLeague' and the astronaut logo are trademarks of SkyLeague Technologies, registered at Chamber of Commerce in The Netherlands under number 86650564.
 
 All product names, logos, brands, trademarks and registered trademarks are property of their respective owners. All company, product and service names used in this website are for identification purposes only. Use of these names, trademarks and brands does not imply endorsement.

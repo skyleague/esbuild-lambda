@@ -1,2 +1,2 @@
-export { listLambdaHandlers } from './list-handlers'
-export { esbuildLambda } from './build-lambda'
+export { listLambdaHandlers } from './list-handlers.js'
+export { esbuildLambda } from './build-lambda.js'

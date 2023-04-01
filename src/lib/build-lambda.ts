@@ -1,10 +1,10 @@
-import { jsonPlugin, lambdaEntryPlugin, lambdaExternalsPlugin } from '../plugins'
+import { jsonPlugin, lambdaEntryPlugin, lambdaExternalsPlugin } from '../plugins/index.js'
 
 import type { BuildOptions, Plugin } from 'esbuild'
 import { build } from 'esbuild'
 
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 
 interface BuildLambdaOptions {
     root: string

@@ -1,8 +1,8 @@
 import { parallelLimit } from '@skyleague/axioms'
 
-import fs from 'fs'
-import os from 'os'
-import path from 'path'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 
 const pLimit = parallelLimit(Math.max(os.cpus().length, 2))
 export async function listLambdaHandlers(dir: string): Promise<string[]> {

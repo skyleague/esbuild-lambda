@@ -1,6 +1,6 @@
 import type { Plugin } from 'esbuild'
 
-import fs from 'fs'
+import fs from 'node:fs'
 
 export const jsonPlugin: Plugin = {
     name: 'json-loader',

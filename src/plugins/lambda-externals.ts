@@ -1,15 +1,15 @@
 import type { Plugin } from 'esbuild'
 
-import child_process from 'child_process'
-import fs from 'fs'
-import path from 'path'
+import child_process from 'node:child_process'
+import fs from 'node:fs'
+import path from 'node:path'
 
 function determinePackageName(fullPath: string): string {
     const split = fullPath.split('/')
     if (fullPath.startsWith('@')) {
         return split.slice(0, 2).join('/')
     }
-    return split[0]
+    return split[0]!
 }
 
 export function lambdaExternalsPlugin({
