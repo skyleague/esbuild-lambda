@@ -1,3 +1,3 @@
-export { jsonPlugin } from './json'
-export { lambdaEntryPlugin } from './lambda-entry'
-export { lambdaExternalsPlugin } from './lambda-externals'
+export { jsonPlugin } from './json.js'
+export { lambdaEntryPlugin } from './lambda-entry.js'
+export { lambdaExternalsPlugin } from './lambda-externals.js'
