@@ -17,8 +17,8 @@ export async function listLambdaHandlers(dir: string): Promise<string[]> {
     const handlers: string[] = []
     const index = subs.find((s) => s.sub.endsWith(`${path.sep}index.ts`))
     if (index !== undefined) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-var-requires
-        if (Object.keys(require(index.sub)).includes('handler')) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        if (Object.keys(await import(index.sub.replace(/\.ts$/g, '.js'))).includes('handler')) {
             handlers.push(dir)
         }
     }

@@ -26,8 +26,10 @@ interface BuildLambdaOptions {
 }
 export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions): Promise<void> {
     const { root, forceBundle } = options
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const packageJson = require(`${root}/package.json`) as Record<string, unknown>
+
+    const packageJson = await import(`${root}/package.json`, { assert: { type: 'json' } }).then(
+        (res: Record<string, unknown>) => (res.default ?? res) as Record<string, unknown>
+    )
     console.time(`${path.relative(root, fnDir)}\ntotal`)
     await fs.promises.rm(path.join(fnDir, '.build'), { recursive: true }).catch(() => void {})
     await build({
@@ -36,12 +38,13 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
         platform: 'node',
         metafile: true,
         treeShaking: true,
+        format: 'esm',
         ...options.esbuild,
 
         plugins: [
             ...(options.plugins?.pre ?? []),
             jsonPlugin,
-            lambdaEntryPlugin(options.lambdaEntry?.features),
+            lambdaEntryPlugin({ ...options.lambdaEntry?.features, esm: options.esbuild?.format !== 'cjs' }),
             lambdaExternalsPlugin({
                 root,
                 packageJson,
