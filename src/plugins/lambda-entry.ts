@@ -1,7 +1,10 @@
 import type { Plugin } from 'esbuild'
 
-export const lambdaEntryPlugin: (features?: { sourceMapSupport?: boolean; xray?: boolean }) => Plugin = (
-    features = { xray: true, sourceMapSupport: true }
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+export const lambdaEntryPlugin: (features: { sourceMapSupport?: boolean; xray?: boolean; esm: boolean }) => Plugin = (
+    features
 ) => ({
     name: 'lambda-entry-loader',
     setup: (compiler) => {
@@ -14,16 +17,17 @@ export const lambdaEntryPlugin: (features?: { sourceMapSupport?: boolean; xray?:
             return { path: require.resolve(args.path, { paths: [args.resolveDir] }) }
         })
         compiler.onLoad({ filter, namespace }, (args) => {
+            const load = features.esm ? 'await import' : 'require'
             return {
                 contents: [
                     ...(features.xray ?? true
                         ? [
                               // Before doing anything, attempt to initiate the HTTPs capture
-                              `try { new require('@aws-lambda-powertools/tracer').Tracer({ captureHTTPsRequests: true }) } catch (err) {}`,
+                              `try { new (${load}('@aws-lambda-powertools/tracer')).Tracer({ captureHTTPsRequests: true }) } catch (err) {}`,
                           ]
                         : []),
                     ...(features.sourceMapSupport ?? true
-                        ? [`try { require('source-map-support').install() } catch (err) {}`]
+                        ? [`try { (${load}('source-map-support')).install() } catch (err) {}`]
                         : []),
                     `export { handler } from '${args.path.replaceAll('\\', '\\\\')}'`,
                 ].join('\n'),

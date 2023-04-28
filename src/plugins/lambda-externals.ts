@@ -2,7 +2,10 @@ import type { Plugin } from 'esbuild'
 
 import child_process from 'node:child_process'
 import fs from 'node:fs'
+import { createRequire, isBuiltin } from 'node:module'
 import path from 'node:path'
+
+const require = createRequire(import.meta.url)
 
 function determinePackageName(fullPath: string): string {
     const split = fullPath.split('/')
@@ -25,20 +28,21 @@ export function lambdaExternalsPlugin({
 }): Plugin {
     return {
         name: 'lambda-externals',
-        setup: (compiler) => {
+        setup: async (compiler) => {
             const externals: Record<string, string> = {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-var-requires
-                'source-map-support': require('source-map-support/package.json').version,
+                'source-map-support': await import('source-map-support/package.json', { assert: { type: 'json' } }).then(
+                    (res) => res.default.version ?? (res as unknown as Record<string, string>).version
+                ),
             }
 
-            compiler.onResolve({ namespace: 'file', filter: /.*/ }, (args) => {
+            compiler.onResolve({ namespace: 'file', filter: /.*/ }, async (args) => {
                 if (args.path.startsWith('.')) {
                     // relative import's don't need to be added to the package.json
                     return null
                 }
 
                 const packageName = determinePackageName(args.path)
-                if (packageName === require.resolve(packageName)) {
+                if (packageName === require.resolve(packageName) || isBuiltin(packageName)) {
                     // this detects node built-in libraries like fs, path, etc, we don't need to add those to the package.json
                     return null
                 }
@@ -60,11 +64,17 @@ export function lambdaExternalsPlugin({
 
                 // Finally, it it's NEITHER a relative import NOR a node built-in libary, determine the relevant version for the Lambda handler
                 try {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-var-requires
-                    externals[packageName] = require(path.join(root, 'node_modules', packageName, 'package.json')).version
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                    externals[packageName] = await import(path.join(root, 'node_modules', packageName, 'package.json'), {
+                        assert: { type: 'json' },
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
+                    }).then((res: any): any => (res.default ?? res).version)
                 } catch (err) {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-var-requires
-                    externals[packageName] = require(path.join(packageName, 'package.json')).version
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                    externals[packageName] = await import(path.join(packageName, 'package.json'), {
+                        assert: { type: 'json' },
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
+                    }).then((res: any): any => (res.default ?? res).version)
                 }
                 return { path: args.path, external: true }
             })
