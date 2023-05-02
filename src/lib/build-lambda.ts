@@ -1,4 +1,4 @@
-import { jsonPlugin, lambdaEntryPlugin, lambdaExternalsPlugin } from '../plugins/index.js'
+import { lambdaEntryPlugin, lambdaExternalsPlugin } from '../plugins/index.js'
 
 import type { BuildOptions, Plugin } from 'esbuild'
 import { build } from 'esbuild'
@@ -40,10 +40,12 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
         treeShaking: true,
         format: 'esm',
         ...options.esbuild,
-
+        loader: {
+            '.json': 'json',
+            ...options.esbuild?.loader,
+        },
         plugins: [
             ...(options.plugins?.pre ?? []),
-            jsonPlugin,
             lambdaEntryPlugin({ ...options.lambdaEntry?.features, esm: options.esbuild?.format !== 'cjs' }),
             lambdaExternalsPlugin({
                 root,
