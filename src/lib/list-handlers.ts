@@ -1,11 +1,11 @@
-import { parallelLimit } from '@skyleague/axioms'
+import { asyncCollect, parallelLimit } from '@skyleague/axioms'
 
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
 const pLimit = parallelLimit(Math.max(os.cpus().length, 2))
-export async function listLambdaHandlers(dir: string): Promise<string[]> {
+export async function* listLambdaHandlersGenerator(dir: string): AsyncGenerator<string, void> {
     const subs = await Promise.all(
         (
             await fs.promises.readdir(dir)
@@ -14,17 +14,18 @@ export async function listLambdaHandlers(dir: string): Promise<string[]> {
             .map((sub) => path.join(dir, sub))
             .map(async (sub) => ({ sub, stat: await pLimit(() => fs.promises.stat(sub)) }))
     )
-    const handlers: string[] = []
     const index = subs.find((s) => s.sub.endsWith(`${path.sep}index.ts`))
     if (index !== undefined) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (Object.keys(await import(index.sub.replace(/\.ts$/g, '.js'))).includes('handler')) {
-            handlers.push(dir)
+            yield dir
         }
     }
     for (const sub of subs.filter((s) => s.stat.isDirectory())) {
-        handlers.push(...(await listLambdaHandlers(sub.sub)))
+        yield* listLambdaHandlersGenerator(sub.sub)
     }
+}
 
-    return handlers
+export async function listLambdaHandlers(dir: string): Promise<string[]> {
+    return asyncCollect(listLambdaHandlersGenerator(dir))
 }
