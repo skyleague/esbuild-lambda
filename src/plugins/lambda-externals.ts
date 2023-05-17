@@ -83,11 +83,10 @@ export function lambdaExternalsPlugin({
                     Object.keys(result.metafile?.outputs ?? {}).map((f) => path.dirname(path.join(root, f)))
                 )) {
                     const lambdaPackageJson = {
-                        ...packageJson,
-                        devDependencies: undefined,
-                        scripts: undefined,
-                        files: undefined,
-                        dependencies: externals,
+                        name: packageJson.name,
+                        type: packageJson.type,
+                        sideEffects: packageJson.sideEffects,
+                        dependencies: Object.fromEntries(Object.entries(externals).sort(([a], [b]) => a.localeCompare(b))),
                     }
                     await Promise.all([
                         // Write the newly generated package with narrow `externals` as dependencies
