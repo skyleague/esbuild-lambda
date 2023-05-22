@@ -70,10 +70,13 @@ export function lambdaExternalsPlugin({
                 // Finally, it it's NEITHER a relative import NOR a node built-in libary, determine the relevant version for the Lambda handler
                 try {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                    externals[packageName] = await import(getImportPath(path.join(root, 'node_modules', packageName, 'package.json')), {
-                        assert: { type: 'json' },
+                    externals[packageName] = await import(
+                        getImportPath(path.join(root, 'node_modules', packageName, 'package.json')),
+                        {
+                            assert: { type: 'json' },
+                        }
                         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-                    }).then((res: any): any => (res.default ?? res).version)
+                    ).then((res: any): any => (res.default ?? res).version)
                 } catch (err) {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                     externals[packageName] = await import(getImportPath(path.join(packageName, 'package.json')), {

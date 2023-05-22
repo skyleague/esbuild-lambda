@@ -1,9 +1,10 @@
+import { getImportPath } from '../plugins/index.js'
+
 import { asyncCollect, parallelLimit } from '@skyleague/axioms'
 
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { getImportPath } from '../plugins/index.js'
 
 const pLimit = parallelLimit(Math.max(os.cpus().length, 2))
 export async function* listLambdaHandlersGenerator(dir: string): AsyncGenerator<string, void> {
