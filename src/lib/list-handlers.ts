@@ -3,6 +3,7 @@ import { asyncCollect, parallelLimit } from '@skyleague/axioms'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { getImportPath } from '../plugins/index.js'
 
 const pLimit = parallelLimit(Math.max(os.cpus().length, 2))
 export async function* listLambdaHandlersGenerator(dir: string): AsyncGenerator<string, void> {
@@ -17,7 +18,7 @@ export async function* listLambdaHandlersGenerator(dir: string): AsyncGenerator<
     const index = subs.find((s) => s.sub.endsWith(`${path.sep}index.ts`))
     if (index !== undefined) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        if (Object.keys(await import(index.sub.replace(/\.ts$/g, '.js'))).includes('handler')) {
+        if (Object.keys(await import(getImportPath(index.sub.replace(/\.ts$/g, '.js')))).includes('handler')) {
             yield dir
         }
     }

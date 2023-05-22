@@ -4,6 +4,7 @@ import child_process from 'node:child_process'
 import fs from 'node:fs'
 import { createRequire, isBuiltin } from 'node:module'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const require = createRequire(import.meta.url)
 
@@ -13,6 +14,10 @@ function determinePackageName(fullPath: string): string {
         return split.slice(0, 2).join('/')
     }
     return split[0]!
+}
+
+export function getImportPath(packagePath: string) {
+    return path.isAbsolute(packagePath) ? pathToFileURL(packagePath).href : packagePath
 }
 
 export function lambdaExternalsPlugin({
@@ -65,13 +70,13 @@ export function lambdaExternalsPlugin({
                 // Finally, it it's NEITHER a relative import NOR a node built-in libary, determine the relevant version for the Lambda handler
                 try {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                    externals[packageName] = await import(path.join(root, 'node_modules', packageName, 'package.json'), {
+                    externals[packageName] = await import(getImportPath(path.join(root, 'node_modules', packageName, 'package.json')), {
                         assert: { type: 'json' },
                         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
                     }).then((res: any): any => (res.default ?? res).version)
                 } catch (err) {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                    externals[packageName] = await import(path.join(packageName, 'package.json'), {
+                    externals[packageName] = await import(getImportPath(path.join(packageName, 'package.json')), {
                         assert: { type: 'json' },
                         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
                     }).then((res: any): any => (res.default ?? res).version)

@@ -1,4 +1,4 @@
-import { lambdaEntryPlugin, lambdaExternalsPlugin } from '../plugins/index.js'
+import { getImportPath, lambdaEntryPlugin, lambdaExternalsPlugin } from '../plugins/index.js'
 
 import type { BuildOptions, Plugin } from 'esbuild'
 import { build } from 'esbuild'
@@ -27,7 +27,7 @@ interface BuildLambdaOptions {
 export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions): Promise<void> {
     const { root, forceBundle } = options
 
-    const packageJson = await import(`${root}/package.json`, { assert: { type: 'json' } }).then(
+    const packageJson = await import(getImportPath(`${root}/package.json`), { assert: { type: 'json' } }).then(
         (res: Record<string, unknown>) => (res.default ?? res) as Record<string, unknown>
     )
     console.time(`${path.relative(root, fnDir)}\ntotal`)
