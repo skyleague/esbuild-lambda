@@ -1,2 +1,2 @@
 export { lambdaEntryPlugin } from './lambda-entry.js'
-export { lambdaExternalsPlugin } from './lambda-externals.js'
+export { getImportPath, lambdaExternalsPlugin } from './lambda-externals.js'
