@@ -38,6 +38,7 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
         platform: 'node',
         metafile: true,
         treeShaking: true,
+        write: false,
         format: 'esm',
         ...options.esbuild,
         loader: {
