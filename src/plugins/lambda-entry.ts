@@ -1,5 +1,6 @@
 import type { Plugin } from 'esbuild'
 
+import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 
@@ -34,6 +35,17 @@ export const lambdaEntryPlugin: (features: { sourceMapSupport?: boolean; xray?: 
                     `export { handler } from './${path.basename(args.path.replace(/\.ts$/, '.js'))}'`,
                 ].join('\n'),
                 loader: 'ts',
+            }
+        })
+        compiler.onEnd(async (result) => {
+            for (const file of result.outputFiles ?? []) {
+                if (features.esm && file.path.endsWith('.js') && file.text.includes('__require')) {
+                    file.contents = Buffer.concat([
+                        Buffer.from(`const require = (await import('node:module')).createRequire(import.meta.url);`),
+                        file.contents,
+                    ])
+                }
+                await fs.promises.writeFile(file.path, file.contents)
             }
         })
     },
