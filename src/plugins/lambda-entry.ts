@@ -38,15 +38,18 @@ export const lambdaEntryPlugin: (features: { sourceMapSupport?: boolean; xray?: 
             }
         })
         compiler.onEnd(async (result) => {
-            for (const file of result.outputFiles ?? []) {
-                if (features.esm && file.path.endsWith('.js') && file.text.includes('__require')) {
-                    file.contents = Buffer.concat([
-                        Buffer.from(`const require = (await import('node:module')).createRequire(import.meta.url);`),
-                        file.contents,
-                    ])
-                }
-                await fs.promises.writeFile(file.path, file.contents)
-            }
+            await Promise.all(
+                result.outputFiles?.map(async (file) => {
+                    if (features.esm && file.path.endsWith('.js') && file.text.includes('__require')) {
+                        file.contents = Buffer.concat([
+                            Buffer.from(`const require = (await import('node:module')).createRequire(import.meta.url);`),
+                            file.contents,
+                        ])
+                    }
+                    await fs.promises.mkdir(path.dirname(file.path), { recursive: true }).catch(() => void {})
+                    await fs.promises.writeFile(file.path, file.contents)
+                }) ?? []
+            )
         })
     },
 })
