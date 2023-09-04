@@ -8,9 +8,8 @@ const require = createRequire(import.meta.url)
 export const lambdaEntryPlugin: (features: {
     sourceMapSupport?: boolean
     xray?: boolean
-    esm: boolean
     exports?: [string, ...string[]]
-}) => Plugin = ({ sourceMapSupport = false, xray = true, esm, exports }) => ({
+}) => Plugin = ({ sourceMapSupport = false, xray = true, exports }) => ({
     name: 'lambda-entry-loader',
     setup: (compiler) => {
         const filter = /\.tsx?$/
@@ -22,17 +21,18 @@ export const lambdaEntryPlugin: (features: {
             return { path: require.resolve(args.path, { paths: [args.resolveDir] }) }
         })
         compiler.onLoad({ filter, namespace }, (args) => {
-            const load = esm ? 'await import' : 'require'
             return {
                 resolveDir: path.resolve(process.cwd(), path.dirname(args.path)),
                 contents: [
                     ...(xray ?? true
                         ? [
                               // Before doing anything, attempt to initiate the HTTPs capture
-                              `try { new (${load}('@aws-lambda-powertools/tracer')).Tracer({ captureHTTPsRequests: true }) } catch (err) {}`,
+                              `try { new (await import('@aws-lambda-powertools/tracer')).Tracer({ captureHTTPsRequests: true }) } catch (err) {}`,
                           ]
                         : []),
-                    ...(sourceMapSupport ?? false ? [`try { (${load}('source-map-support')).install() } catch (err) {}`] : []),
+                    ...(sourceMapSupport ?? false
+                        ? [`try { (await import('source-map-support')).install() } catch (err) {}`]
+                        : []),
                     `export { ${exports?.join(', ') ?? 'handler'} } from './${path.basename(args.path.replace(/\.ts$/, '.js'))}'`,
                 ].join('\n'),
                 loader: 'ts',
@@ -41,7 +41,7 @@ export const lambdaEntryPlugin: (features: {
         compiler.onEnd(async (result) => {
             await Promise.all(
                 result.outputFiles?.map(async (file) => {
-                    if (esm && file.path.endsWith('.js') && file.text.includes('__require')) {
+                    if (file.path.endsWith('.js') && file.text.includes('__require')) {
                         file.contents = Buffer.concat([
                             Buffer.from(`const require = (await import('node:module')).createRequire(import.meta.url);`),
                             file.contents,

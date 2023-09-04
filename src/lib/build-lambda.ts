@@ -48,7 +48,7 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
         },
         plugins: [
             ...(options.plugins?.pre ?? []),
-            lambdaEntryPlugin({ ...options.lambdaEntry?.features, esm: options.esbuild?.format !== 'cjs' }),
+            lambdaEntryPlugin({ ...options.lambdaEntry?.features }),
             lambdaExternalsPlugin({
                 root,
                 packageJson,
