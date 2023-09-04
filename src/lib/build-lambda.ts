@@ -16,6 +16,7 @@ interface BuildLambdaOptions {
         features?: {
             xray?: boolean
             sourceMapSupport?: boolean
+            exports?: [string, ...string[]]
         }
     }
     plugins?: {
