@@ -15,7 +15,6 @@ interface BuildLambdaOptions {
     lambdaEntry?: {
         features?: {
             xray?: boolean
-            sourceMapSupport?: boolean
             exports?: [string, ...string[]]
         }
     }
