@@ -6,8 +6,13 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+interface Options {
+    fileName: string
+    isHandler: (mod: {}) => boolean
+}
+
 const pLimit = parallelLimit(Math.max(os.cpus().length, 2))
-export async function* listLambdaHandlersGenerator(dir: string): AsyncGenerator<string, void> {
+export async function* listLambdaHandlersGenerator(dir: string, { fileName, isHandler }: Options): AsyncGenerator<string, void> {
     const subs = await Promise.all(
         (
             await fs.promises.readdir(dir)
@@ -16,18 +21,21 @@ export async function* listLambdaHandlersGenerator(dir: string): AsyncGenerator<
             .map((sub) => path.join(dir, sub))
             .map(async (sub) => ({ sub, stat: await pLimit(() => fs.promises.stat(sub)) }))
     )
-    const index = subs.find((s) => s.sub.endsWith(`${path.sep}index.ts`))
+    const index = subs.find((s) => s.sub.endsWith(`${path.sep}${fileName}`))
     if (index !== undefined) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        if (Object.keys(await import(getImportPath(index.sub.replace(/\.ts$/g, '.js')))).includes('handler')) {
+        if (isHandler(await import(getImportPath(index.sub.replace(/\.ts$/g, '.js'))))) {
             yield dir
         }
     }
     for (const sub of subs.filter((s) => s.stat.isDirectory())) {
-        yield* listLambdaHandlersGenerator(sub.sub)
+        yield* listLambdaHandlersGenerator(sub.sub, { fileName, isHandler })
     }
 }
 
-export async function listLambdaHandlers(dir: string): Promise<string[]> {
-    return asyncCollect(listLambdaHandlersGenerator(dir))
+export async function listLambdaHandlers(
+    dir: string,
+    { fileName = 'index.ts', isHandler = (mod) => Object.keys(mod).includes('handler') }: Partial<Options> = {}
+): Promise<string[]> {
+    return asyncCollect(listLambdaHandlersGenerator(dir, { fileName, isHandler }))
 }
