@@ -12,7 +12,10 @@ interface Options {
 }
 
 const pLimit = parallelLimit(Math.max(os.cpus().length, 2))
-export async function* listLambdaHandlersGenerator(dir: string, { fileName, isHandler }: Options): AsyncGenerator<string, void> {
+export async function* listLambdaHandlersGenerator(
+    dir: string,
+    { fileName = 'index.ts', isHandler = (mod) => Object.keys(mod).includes('handler') }: Partial<Options> = {}
+): AsyncGenerator<string, void> {
     const subs = await Promise.all(
         (
             await fs.promises.readdir(dir)
@@ -33,9 +36,6 @@ export async function* listLambdaHandlersGenerator(dir: string, { fileName, isHa
     }
 }
 
-export async function listLambdaHandlers(
-    dir: string,
-    { fileName = 'index.ts', isHandler = (mod) => Object.keys(mod).includes('handler') }: Partial<Options> = {}
-): Promise<string[]> {
-    return asyncCollect(listLambdaHandlersGenerator(dir, { fileName, isHandler }))
+export async function listLambdaHandlers(dir: string, options: Partial<Options> = {}): Promise<string[]> {
+    return asyncCollect(listLambdaHandlersGenerator(dir, options))
 }
