@@ -17,9 +17,7 @@ export async function* listLambdaHandlersGenerator(
     { fileName = 'index.ts', isHandler = (mod) => Object.keys(mod).includes('handler') }: Partial<Options> = {}
 ): AsyncGenerator<string, void> {
     const subs = await Promise.all(
-        (
-            await fs.promises.readdir(dir)
-        )
+        (await fs.promises.readdir(dir))
             .filter((sub) => !sub.startsWith('.'))
             .map((sub) => path.join(dir, sub))
             .map(async (sub) => ({ sub, stat: await pLimit(() => fs.promises.stat(sub)) }))

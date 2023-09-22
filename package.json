@@ -37,14 +37,13 @@
     "test": "npx vitest run"
   },
   "dependencies": {
-    "@skyleague/axioms": "^2.0.3",
-    "esbuild": "^0.19.2",
-    "source-map-support": "^0.5.21",
-    "tslib": "^2.5.0"
+    "@skyleague/axioms": "^2.4.1",
+    "esbuild": "^0.19.3",
+    "tslib": "^2.6.2"
   },
   "devDependencies": {
-    "@skyleague/node-standards": "^3.8.4",
-    "typescript": "^5.0.4"
+    "@skyleague/node-standards": "^3.9.0",
+    "typescript": "^5.2.2"
   },
   "engines": {
     "node": ">=18"

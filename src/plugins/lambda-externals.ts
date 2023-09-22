@@ -33,12 +33,8 @@ export function lambdaExternalsPlugin({
 }): Plugin {
     return {
         name: 'lambda-externals',
-        setup: async (compiler) => {
-            const externals: Record<string, string> = {
-                'source-map-support': await import('source-map-support/package.json', { assert: { type: 'json' } }).then(
-                    (res) => res.default.version ?? (res as unknown as Record<string, string>).version
-                ),
-            }
+        setup: (compiler) => {
+            const externals: Record<string, string> = {}
 
             compiler.onResolve({ namespace: 'file', filter: /.*/ }, async (args) => {
                 if (args.path.startsWith('.')) {
