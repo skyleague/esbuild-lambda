@@ -99,7 +99,7 @@ export function lambdaExternalsPlugin({
                         fs.promises.copyFile(path.join(root, 'package-lock.json'), path.join(artifactDir, 'package-lock.json')),
                     ])
                     await new Promise((resolve, reject) => {
-                        const p = child_process.exec('npm ci', { cwd: artifactDir }, (err, stdout) =>
+                        const p = child_process.exec('npm ci --omit=dev --omit=optional', { cwd: artifactDir }, (err, stdout) =>
                             err ? reject(err) : resolve(stdout)
                         )
                         p.on('error', reject)
