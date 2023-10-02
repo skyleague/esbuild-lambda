@@ -45,11 +45,13 @@ export function lambdaExternalsPlugin({
 
                 const packageName = determinePackageName(args.path)
                 if (
-                    (recoverTry(
-                        // For some packages missing both `main` and `exports`, require.resolve will fail
+                    // For some packages with incorrect `main` or `exports`, require.resolve will fail
+                    // These packages are not NodeJS built-in packages anyway
+                    recoverTry(
+                        // Only packages that are built-in will resolve to the same path with require.resolve
                         mapTry(packageName, (p) => p === require.resolve(p)),
                         () => false
-                    ) as boolean) ||
+                    ) === true ||
                     isBuiltin(packageName)
                 ) {
                     // this detects node built-in libraries like fs, path, etc, we don't need to add those to the package.json
