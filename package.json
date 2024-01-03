@@ -21,7 +21,7 @@
     "package.json"
   ],
   "scripts": {
-    "build": "npx ts-node --esm build.config.ts",
+    "build": "node --import tsx/esm build.config.ts",
     "build:docs": "npx typedoc",
     "check:cost": "npx cost-of-modules --no-install --include-dev",
     "check:coverage": "npx vitest run --coverage=true",
@@ -37,16 +37,16 @@
     "test": "npx vitest run"
   },
   "dependencies": {
-    "@skyleague/axioms": "^2.4.1",
-    "esbuild": "^0.19.3",
+    "@skyleague/axioms": "^3.0.2",
+    "esbuild": "^0.19.11",
     "tslib": "^2.6.2"
   },
   "devDependencies": {
-    "@skyleague/node-standards": "^3.9.0",
-    "typescript": "^5.2.2"
+    "@skyleague/node-standards": "^4.1.0",
+    "typescript": "^5.3.3"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "publishConfig": {
     "access": "public",
