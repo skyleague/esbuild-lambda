@@ -1,8 +1,8 @@
 import { setupImportRewriteOnLoad } from './import-rewrite.js'
 
-import { alphaNumeric, array, asyncForAll, constants, object, oneOf, string, tuple } from '@skyleague/axioms'
+import { constants, alphaNumeric, array, asyncForAll, object, oneOf, string, tuple } from '@skyleague/axioms'
 import type { OnLoadArgs } from 'esbuild'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 describe('onLoad', () => {
     const _fs = { promises: { readFile: vi.fn() } }
@@ -15,7 +15,7 @@ describe('onLoad', () => {
             expect(
                 await onLoad({
                     path: `./${fileName}.ts`,
-                } as OnLoadArgs)
+                } as OnLoadArgs),
             ).toEqual(undefined)
             expect(_fs.promises.readFile).toHaveBeenCalledTimes(1)
             expect(_fs.promises.readFile).toHaveBeenCalledWith(`./${fileName}.ts`, 'utf8')
@@ -36,7 +36,7 @@ describe('onLoad', () => {
                     quote: constants("'", '"'),
                     imports: array(
                         tuple(whitespace(), alphaNumeric({ minLength: 1 }), whitespace()).map((xs) => xs.join('')),
-                        { minLength: 1 }
+                        { minLength: 1 },
                     ),
                     lineEnd: oneOf(whitespace(), constants(';')),
                     preImportLine: string(),
@@ -56,7 +56,7 @@ describe('onLoad', () => {
                         postImportLine,
                         imports,
                     }
-                })
+                }),
             ),
             async ([fileName, { contents, preImportLine, postImportLine, imports }]) => {
                 _fs.promises.readFile.mockReset()
@@ -72,7 +72,7 @@ describe('onLoad', () => {
                 expect(result?.contents?.toString().endsWith(postImportLine)).toEqual(true)
                 expect(_fs.promises.readFile).toHaveBeenCalledTimes(1)
                 expect(_fs.promises.readFile).toHaveBeenCalledWith(`./${fileName}.ts`, 'utf8')
-            }
+            },
         )
     })
 
@@ -92,7 +92,7 @@ describe('onLoad', () => {
                     quote: constants("'", '"'),
                     imports: array(
                         tuple(whitespace(), alphaNumeric({ minLength: 1 }), whitespace()).map((xs) => xs.join('')),
-                        { minLength: 1 }
+                        { minLength: 1 },
                     ),
                     lineEnd: oneOf(whitespace(), constants(';')),
                     preImportLine: string(),
@@ -113,7 +113,7 @@ describe('onLoad', () => {
                         const contents = [
                             preImportLine,
                             `const${preCurly}{${imports.join(
-                                ','
+                                ',',
                             )}}${postCurly}=${preRequire}require${postRequire}(${requirePadding}${quote}lodash${quote}${requirePadding})${lineEnd}`,
                             postImportLine,
                         ].join('\n')
@@ -126,8 +126,8 @@ describe('onLoad', () => {
                             postImportLine,
                             imports,
                         }
-                    }
-                )
+                    },
+                ),
             ),
             async ([fileName, { contents, preImportLine, postImportLine, imports }]) => {
                 _fs.promises.readFile.mockReset()
@@ -143,7 +143,7 @@ describe('onLoad', () => {
                 expect(result?.contents?.toString().endsWith(postImportLine)).toEqual(true)
                 expect(_fs.promises.readFile).toHaveBeenCalledTimes(1)
                 expect(_fs.promises.readFile).toHaveBeenCalledWith(`./${fileName}.ts`, 'utf8')
-            }
+            },
         )
     })
 })
