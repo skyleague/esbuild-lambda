@@ -9,7 +9,6 @@ import path from 'node:path'
 interface BuildLambdaOptions {
     root?: string
     modulesRoot?: string
-    awsSdkV3?: true
     outdir?: (context: { fnDir: string; root: string }) => string
     forceBundle?: (input: { packageName: string; path: string }) => boolean
     entryPoint?: (fnDir: string) => string
@@ -57,7 +56,6 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
                 modulesRoot,
                 packageJson,
                 forceBundle,
-                awsSdkV3: options.awsSdkV3 ?? false,
             }),
             ...(options.plugins?.post ?? []),
         ],
