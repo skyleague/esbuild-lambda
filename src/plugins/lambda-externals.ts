@@ -14,6 +14,7 @@ function determinePackageName(fullPath: string): string {
     if (fullPath.startsWith('@')) {
         return split.slice(0, 2).join('/')
     }
+    // biome-ignore lint/style/noNonNullAssertion: we know this is safe
     return split[0]!
 }
 
@@ -23,11 +24,13 @@ export function getImportPath(packagePath: string) {
 
 export function lambdaExternalsPlugin({
     root,
+    modulesRoot,
     packageJson,
     awsSdkV3,
     forceBundle,
 }: {
     root: string
+    modulesRoot: string
     packageJson: Record<string, unknown>
     awsSdkV3: boolean
     forceBundle: ((input: { packageName: string; path: string }) => boolean) | undefined
@@ -50,7 +53,7 @@ export function lambdaExternalsPlugin({
                     recoverTry(
                         // Only packages that are built-in will resolve to the same path with require.resolve
                         mapTry(packageName, (p) => p === require.resolve(p)),
-                        () => false
+                        () => false,
                     ) === true ||
                     isBuiltin(packageName)
                 ) {
@@ -77,24 +80,24 @@ export function lambdaExternalsPlugin({
                 try {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                     externals[packageName] = await import(
-                        getImportPath(path.join(root, 'node_modules', packageName, 'package.json')),
+                        getImportPath(path.join(modulesRoot, 'node_modules', packageName, 'package.json')),
                         {
                             assert: { type: 'json' },
                         }
                         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-                    ).then((res: any): any => (res.default ?? res).version)
-                } catch (err) {
+                    ).then((res) => (res.default ?? res).version)
+                } catch (_err) {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                     externals[packageName] = await import(getImportPath(path.join(packageName, 'package.json')), {
                         assert: { type: 'json' },
                         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-                    }).then((res: any): any => (res.default ?? res).version)
+                    }).then((res) => (res.default ?? res).version)
                 }
                 return { path: args.path, external: true }
             })
             compiler.onEnd(async (result) => {
                 for (const artifactDir of new Set(
-                    Object.keys(result.metafile?.outputs ?? {}).map((f) => path.dirname(path.join(root, f)))
+                    Object.keys(result.metafile?.outputs ?? {}).map((f) => path.dirname(path.join(root, f))),
                 )) {
                     const lambdaPackageJson = {
                         name: packageJson.name,
@@ -106,11 +109,14 @@ export function lambdaExternalsPlugin({
                         // Write the newly generated package with narrow `externals` as dependencies
                         fs.promises.writeFile(path.join(artifactDir, 'package.json'), JSON.stringify(lambdaPackageJson, null, 2)),
                         // copy the lockfile for extra safety
-                        fs.promises.copyFile(path.join(root, 'package-lock.json'), path.join(artifactDir, 'package-lock.json')),
+                        fs.promises.copyFile(
+                            path.join(modulesRoot, 'package-lock.json'),
+                            path.join(artifactDir, 'package-lock.json'),
+                        ),
                     ])
                     await new Promise((resolve, reject) => {
                         const p = child_process.exec('npm ci --omit=dev --omit=optional', { cwd: artifactDir }, (err, stdout) =>
-                            err ? reject(err) : resolve(stdout)
+                            err ? reject(err) : resolve(stdout),
                         )
                         p.on('error', reject)
                     })
@@ -133,13 +139,13 @@ export function lambdaExternalsPlugin({
                                         },
                                     },
                                     null,
-                                    2
-                                )
+                                    2,
+                                ),
                             )
                             // HOTFIX: remove aws-sdk that might have transitively been included
                             await new Promise((resolve, reject) => {
                                 const p = child_process.exec('npm i --cache', { cwd: artifactDir }, (err, stdout) =>
-                                    err ? reject(err) : resolve(stdout)
+                                    err ? reject(err) : resolve(stdout),
                                 )
                                 p.on('error', reject)
                             })

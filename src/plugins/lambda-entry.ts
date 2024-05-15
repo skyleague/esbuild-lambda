@@ -45,7 +45,7 @@ export const lambdaEntryPlugin: (features: { xray?: boolean; exports?: [string, 
                     }
                     await fs.promises.mkdir(path.dirname(file.path), { recursive: true }).catch(() => void {})
                     await fs.promises.writeFile(file.path, file.contents)
-                }) ?? []
+                }) ?? [],
             )
         })
     },
