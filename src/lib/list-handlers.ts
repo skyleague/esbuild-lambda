@@ -8,19 +8,19 @@ import path from 'node:path'
 
 interface Options {
     fileName: string
-    isHandler: (mod: {}) => boolean
+    isHandler: (mod: object) => boolean
 }
 
 const pLimit = parallelLimit(Math.max(os.cpus().length, 2))
 export async function* listLambdaHandlersGenerator(
     dir: string,
-    { fileName = 'index.ts', isHandler = (mod) => Object.keys(mod).includes('handler') }: Partial<Options> = {}
+    { fileName = 'index.ts', isHandler = (mod) => Object.keys(mod).includes('handler') }: Partial<Options> = {},
 ): AsyncGenerator<string, void> {
     const subs = await Promise.all(
         (await fs.promises.readdir(dir))
             .filter((sub) => !sub.startsWith('.'))
             .map((sub) => path.join(dir, sub))
-            .map(async (sub) => ({ sub, stat: await pLimit(() => fs.promises.stat(sub)) }))
+            .map(async (sub) => ({ sub, stat: await pLimit(() => fs.promises.stat(sub)) })),
     )
     const index = subs.find((s) => s.sub.endsWith(`${path.sep}${fileName}`))
     if (index !== undefined) {
@@ -34,6 +34,6 @@ export async function* listLambdaHandlersGenerator(
     }
 }
 
-export async function listLambdaHandlers(dir: string, options: Partial<Options> = {}): Promise<string[]> {
+export function listLambdaHandlers(dir: string, options: Partial<Options> = {}): Promise<string[]> {
     return asyncCollect(listLambdaHandlersGenerator(dir, options))
 }

@@ -18,20 +18,20 @@ export function importRewritePlugin(options: { filter?: RegExp; importName: stri
 export const setupImportRewriteOnLoad = (
     importName: string,
     outImportName: string,
-    fs: { promises: Pick<typeof _fs.promises, 'readFile'> } = _fs
+    fs: { promises: Pick<typeof _fs.promises, 'readFile'> } = _fs,
 ): Parameters<PluginBuild['onLoad']>[1] => {
     return async (args) => {
         const contents = await fs.promises.readFile(args.path, 'utf8')
 
         const importRegex = new RegExp(
             `import\\s*(?:(?:[\\w\\s{},]*\\s*from\\s*)|)['"]${importName}\\/?.*?['"]\\s*?(?:;|$|)`,
-            'gm'
+            'gm',
         )
         const matchedImports = importRegex.exec(contents) ?? []
 
         const requireRegex = new RegExp(
             `const\\s*(?:[\\w\\s{},]*\\s*=\\s*require\\s*\\(\\s*)['"]${importName}\\/?.*?['"]\\s*\\)\\s*?(?:;|$|)`,
-            'gm'
+            'gm',
         )
         const matchedRequires = requireRegex.exec(contents) ?? []
 
@@ -94,9 +94,8 @@ function rewriteImport({
             if (name.includes(' as ')) {
                 const [realName, alias] = name.split(' as ') as [string, string]
                 return toImport(alias, `${outImportName}/${realName}`)
-            } else {
-                return toImport(name, `${outImportName}/${name}`)
             }
+            return toImport(name, `${outImportName}/${name}`)
         })
         .join('\n')
 

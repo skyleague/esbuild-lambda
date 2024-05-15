@@ -16,31 +16,26 @@
     "./*.js": "./.dist/*.js"
   },
   "types": "./.dist/index.d.ts",
-  "files": [
-    ".dist",
-    "package.json"
-  ],
+  "files": [".dist", "package.json"],
   "scripts": {
-    "build": "node --import tsx/esm build.config.ts",
+    "build": "tsc -p tsconfig.dist.json",
     "build:docs": "npx typedoc",
     "check:coverage": "vitest run --coverage=true",
     "check:project": "node-standards lint",
     "check:types": "tsc -p tsconfig.json",
-    "format": "prettier \"**/*.{ts,js,json,yml,yaml,md}\" --write",
-    "lint": "eslint \"./{src,test,typings}/**/*.ts\" --cache --no-eslintrc --config .eslintrc.cjs",
-    "lint:fix": "npm run lint -- --fix",
+    "lint": "biome check src test examples",
+    "lint:fix": "npm run lint -- --apply-unsafe",
     "package": "rm -rf .dist && npm run build",
     "prepare": "husky || true",
     "test": "vitest run"
   },
   "dependencies": {
-    "@skyleague/axioms": "^3.6.0",
-    "esbuild": ">=0.19.0",
-    "tslib": "^2.6.3"
+    "@skyleague/axioms": "^4.3.1",
+    "esbuild": "^0.21.3"
   },
   "devDependencies": {
-    "@skyleague/node-standards": "^5.1.9",
-    "typescript": "^5.3.3"
+    "@skyleague/node-standards": "^7.0.2",
+    "typescript": "^5.4.5"
   },
   "engines": {
     "node": ">=20"
