@@ -23,12 +23,13 @@ interface BuildLambdaOptions {
         post?: Plugin[]
     }
     esbuild?: BuildOptions
+    packager?: 'npm' | 'bun'
 }
 export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions): Promise<void> {
     // biome-ignore lint/style/noNonNullAssertion: we know this is safe
     options.root ??= path.dirname(process.env.npm_package_json!)
     options.modulesRoot ??= process.env.npm_config_local_prefix ?? options.root
-    const { root, modulesRoot, forceBundle } = options
+    const { root, modulesRoot, forceBundle, packager } = options
 
     const packageJson = await import(getImportPath(process.env.npm_package_json ?? `${root}/package.json`), {
         assert: { type: 'json' },
@@ -56,6 +57,7 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
                 modulesRoot,
                 packageJson,
                 forceBundle,
+                packager,
             }),
             ...(options.plugins?.post ?? []),
         ],
