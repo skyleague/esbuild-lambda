@@ -23,6 +23,7 @@ interface BuildLambdaOptions {
         post?: Plugin[]
     }
     esbuild?: BuildOptions
+    packageManager?: 'npm' | 'bun'
 }
 export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions): Promise<void> {
     // biome-ignore lint/style/noNonNullAssertion: we know this is safe

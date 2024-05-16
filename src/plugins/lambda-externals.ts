@@ -27,11 +27,13 @@ export function lambdaExternalsPlugin({
     modulesRoot,
     packageJson,
     forceBundle,
+    packageManager = 'npm',
 }: {
     root: string
     modulesRoot: string
     packageJson: Record<string, unknown>
     forceBundle: ((input: { packageName: string; path: string }) => boolean) | undefined
+    packageManager?: 'npm' | 'bun'
 }): Plugin {
     return {
         name: 'lambda-externals',
@@ -105,12 +107,25 @@ export function lambdaExternalsPlugin({
                             path.join(artifactDir, 'package-lock.json'),
                         ),
                     ])
-                    await new Promise((resolve, reject) => {
-                        const p = child_process.exec('npm ci --omit=dev --omit=optional', { cwd: artifactDir }, (err, stdout) =>
-                            err ? reject(err) : resolve(stdout),
-                        )
-                        p.on('error', reject)
-                    })
+                    if (packageManager === 'bun') {
+                        await new Promise((resolve, reject) => {
+                            const p = child_process.exec(
+                                'bun install --production --frozen-lockfile',
+                                { cwd: artifactDir },
+                                (err, stdout) => (err ? reject(err) : resolve(stdout)),
+                            )
+                            p.on('error', reject)
+                        })
+                    } else {
+                        await new Promise((resolve, reject) => {
+                            const p = child_process.exec(
+                                'npm ci --omit=dev --omit=optional',
+                                { cwd: artifactDir },
+                                (err, stdout) => (err ? reject(err) : resolve(stdout)),
+                            )
+                            p.on('error', reject)
+                        })
+                    }
                 }
             })
         },
