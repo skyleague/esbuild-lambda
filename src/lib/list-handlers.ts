@@ -24,7 +24,6 @@ export async function* listLambdaHandlersGenerator(
     )
     const index = subs.find((s) => s.sub.endsWith(`${path.sep}${fileName}`))
     if (index !== undefined) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (isHandler(await import(getImportPath(index.sub)))) {
             yield dir
         }
