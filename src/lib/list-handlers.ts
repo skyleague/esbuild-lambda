@@ -7,14 +7,14 @@ import os from 'node:os'
 import path from 'node:path'
 
 interface Options {
-    fileName: string
-    isHandler: (mod: object) => boolean
+    fileName?: string | undefined
+    isHandler?: ((mod: object) => boolean) | undefined
 }
 
 const pLimit = parallelLimit(Math.max(os.cpus().length, 2))
 export async function* listLambdaHandlersGenerator(
     dir: string,
-    { fileName = 'index.ts', isHandler = (mod) => Object.keys(mod).includes('handler') }: Partial<Options> = {},
+    { fileName = 'index.ts', isHandler }: Options = {},
 ): AsyncGenerator<string, void> {
     const subs = await Promise.all(
         (await fs.promises.readdir(dir))
@@ -24,9 +24,22 @@ export async function* listLambdaHandlersGenerator(
     )
     const index = subs.find((s) => s.sub.endsWith(`${path.sep}${fileName}`))
     if (index !== undefined) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        if (isHandler(await import(getImportPath(index.sub)))) {
-            yield dir
+        if (isHandler !== undefined) {
+            if (isHandler(await import(getImportPath(index.sub)))) {
+                yield dir
+            }
+        } else {
+            const contents = (await fs.promises.readFile(index.sub)).toString()
+            // check if there is any symbol named handler exported
+            // we need an exaustive check for all posible export types
+            // and formatting
+            if (
+                contents.match(
+                    /export\s+(?:default\s+)?(?:async\s+)?function\s+handler\s*\(|export\s*\{[^}]*\bhandler\b[^}]*\}(?:\s*from\s*['"][^'"]+['"])?\s*;?|module\.exports\.handler\s*=\s*handler\s*;?/,
+                )
+            ) {
+                yield dir
+            }
         }
     }
     for (const sub of subs.filter((s) => s.stat.isDirectory())) {
