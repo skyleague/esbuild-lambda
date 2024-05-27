@@ -5,16 +5,17 @@ import { build } from 'esbuild'
 
 import fs from 'node:fs'
 import path from 'node:path'
+import { excludeVendorFromSourceMapPlugin } from '../plugins/exclude-source-map.js'
 
 interface BuildLambdaOptions {
     root?: string
     modulesRoot?: string
     outdir?: (context: { fnDir: string; root: string }) => string
     forceBundle?: (input: { packageName: string; path: string }) => boolean
+    entryPoints?: string[]
     entryPoint?: (fnDir: string) => string
     lambdaEntry?: {
         features?: {
-            xray?: boolean
             exports?: [string, ...string[]]
         }
     }
@@ -32,7 +33,7 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
     const { root, modulesRoot, forceBundle, packager } = options
 
     const packageJson = await import(getImportPath(process.env.npm_package_json ?? `${root}/package.json`), {
-        assert: { type: 'json' },
+        with: { type: 'json' },
     }).then((res: Record<string, unknown>) => (res.default ?? res) as Record<string, unknown>)
     console.time(`${path.relative(root, fnDir)}\ntotal`)
     await fs.promises.rm(path.join(fnDir, '.build'), { recursive: true }).catch(() => void {})
@@ -47,6 +48,7 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
         ...options.esbuild,
         loader: {
             '.json': 'json',
+            '.map': 'empty',
             ...options.esbuild?.loader,
         },
         plugins: [
@@ -59,9 +61,10 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
                 forceBundle,
                 packager,
             }),
+            excludeVendorFromSourceMapPlugin({ filter: /node_modules/ }),
             ...(options.plugins?.post ?? []),
         ],
-        entryPoints: [options.entryPoint?.(fnDir) ?? path.join(fnDir, 'index.ts')],
+        entryPoints: options?.entryPoints ?? [options.entryPoint?.(fnDir) ?? path.join(fnDir, 'index.ts')],
         outdir: options.outdir?.({ fnDir, root }) ?? path.join(fnDir, '.build/artifacts'),
     })
     console.timeEnd(`${path.relative(root, fnDir)}\ntotal`)
