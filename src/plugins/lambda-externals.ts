@@ -87,8 +87,10 @@ export function lambdaExternalsPlugin({
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                     externals[packageName] = await import(getImportPath(path.join(packageName, 'package.json')), {
                         assert: { type: 'json' },
+                    })
                         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-                    }).then((res: any): any => (res.default ?? res).version)
+                        .then((res: any): any => (res.default ?? res).version)
+                        .catch(() => undefined)
                 }
                 return { path: args.path, external: true }
             })
