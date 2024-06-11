@@ -34,9 +34,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@skyleague/axioms": "^3.0.2",
-    "esbuild": "^0.19.11",
-    "tslib": "^2.6.2"
+    "@skyleague/axioms": "^3.6.0",
+    "esbuild": ">=0.19.0",
+    "tslib": "^2.6.3"
   },
   "devDependencies": {
     "@skyleague/node-standards": "^5.1.9",
