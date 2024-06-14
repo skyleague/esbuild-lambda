@@ -1,9 +1,10 @@
-import { mapTry, recoverTry } from '@skyleague/axioms'
+import { mapTry, parallelLimit, recoverTry } from '@skyleague/axioms'
 import type { Plugin } from 'esbuild'
 
 import child_process from 'node:child_process'
 import fs from 'node:fs'
 import { createRequire, isBuiltin } from 'node:module'
+import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
@@ -28,17 +29,20 @@ export function lambdaExternalsPlugin({
     packageJson,
     forceBundle,
     packager = 'npm',
+    parallelism = Math.max(os.cpus().length * 2, 4),
 }: {
     root: string
     modulesRoot: string
     packageJson: Record<string, unknown>
-    forceBundle: ((input: { packageName: string; path: string }) => boolean) | undefined
+    forceBundle: ((input: { packageName: string; path: string }) => boolean) | true | undefined
     packager?: 'npm' | 'bun' | undefined
+    parallelism?: number
 }): Plugin {
     return {
         name: 'lambda-externals',
         setup: (compiler) => {
-            const externals: Record<string, string> = {}
+            const externals: Record<string, Record<string, string>> = {}
+            const bundled: Record<string, Record<string, string>> = {}
 
             compiler.onResolve({ namespace: 'file', filter: /.*/ }, async (args) => {
                 if (args.path.startsWith('.')) {
@@ -60,73 +64,114 @@ export function lambdaExternalsPlugin({
                     // this detects node built-in libraries like fs, path, etc, we don't need to add those to the package.json
                     return null
                 }
-                if (forceBundle?.({ packageName, path: args.path }) === true) {
-                    // forceBundled dependencies will not be marked as external
-                    return null
-                }
                 if (packageName.startsWith('@aws-sdk/')) {
                     // forcefully mark @aws-sdk/* as external
                     return { path: args.path, external: true }
                 }
 
+                const forceBundled = forceBundle === true ? true : forceBundle?.({ packageName, path: args.path }) === true
+                const register = forceBundled ? bundled : externals
+
+                register[args.importer] ??= {}
+
                 // Finally, it it's NEITHER a relative import NOR a node built-in libary, determine the relevant version for the Lambda handler
                 try {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                    externals[packageName] = await import(
+                    // biome-ignore lint/style/noNonNullAssertion: we know this is safe
+                    register[args.importer]![packageName] ??= await import(
                         getImportPath(path.join(modulesRoot, 'node_modules', packageName, 'package.json')),
                         {
-                            assert: { type: 'json' },
+                            with: { type: 'json' },
                         }
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
                     ).then((res) => (res.default ?? res).version)
                 } catch (_err) {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                    externals[packageName] = await import(getImportPath(path.join(packageName, 'package.json')), {
-                        assert: { type: 'json' },
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-                    }).then((res) => (res.default ?? res).version)
+                    // biome-ignore lint/style/noNonNullAssertion: we know this is safe
+                    register[args.importer]![packageName] ??= await import(
+                        getImportPath(path.join(packageName, 'package.json')),
+                        {
+                            with: { type: 'json' },
+                        }
+                    )
+                        .then((res) => (res.default ?? res).version)
+                        .catch(() => undefined)
                 }
+
+                if (forceBundled) {
+                    // forceBundled dependencies will not be marked as external
+                    return null
+                }
+
                 return { path: args.path, external: true }
             })
             compiler.onEnd(async (result) => {
-                for (const artifactDir of new Set(
-                    Object.keys(result.metafile?.outputs ?? {}).map((f) => path.dirname(path.join(root, f))),
+                const pLimit = parallelLimit(parallelism)
+                // biome-ignore lint/suspicious/noConfusingVoidType: it is correct here
+                const promises: Promise<void | string>[] = []
+                for (const [artifactDir, value] of Object.entries(result.metafile?.outputs ?? {}).map(
+                    ([f, value]) => [path.dirname(path.join(root, f)), value] as const,
                 )) {
+                    const foundExternals = Object.fromEntries(
+                        Object.keys(value.inputs).flatMap((input) =>
+                            Object.entries(externals[path.join(process.cwd(), input)] ?? {}),
+                        ),
+                    )
+                    const foundBundled = Object.fromEntries(
+                        Object.keys(value.inputs).flatMap((input) =>
+                            Object.entries(bundled[path.join(process.cwd(), input)] ?? {}),
+                        ),
+                    )
+
                     const lambdaPackageJson = {
                         name: packageJson.name,
                         type: packageJson.type,
                         sideEffects: packageJson.sideEffects,
-                        dependencies: Object.fromEntries(Object.entries(externals).sort(([a], [b]) => a.localeCompare(b))),
+                        dependencies: Object.fromEntries(Object.entries(foundExternals).sort(([a], [b]) => a.localeCompare(b))),
+                        devDependencies: Object.fromEntries(Object.entries(foundBundled).sort(([a], [b]) => a.localeCompare(b))),
                     }
-                    await Promise.all([
-                        // Write the newly generated package with narrow `externals` as dependencies
-                        fs.promises.writeFile(path.join(artifactDir, 'package.json'), JSON.stringify(lambdaPackageJson, null, 2)),
-                        // copy the lockfile for extra safety
-                        fs.promises.copyFile(
-                            path.join(modulesRoot, 'package-lock.json'),
-                            path.join(artifactDir, 'package-lock.json'),
-                        ),
-                    ])
-                    if (packager === 'bun') {
-                        await new Promise((resolve, reject) => {
-                            const p = child_process.exec(
-                                'bun install --production --frozen-lockfile',
-                                { cwd: artifactDir },
-                                (err, stdout) => (err ? reject(err) : resolve(stdout)),
+
+                    // Write the newly generated package with narrow `externals` as dependencies
+                    await fs.promises.writeFile(
+                        path.join(artifactDir, 'package.json'),
+                        JSON.stringify(lambdaPackageJson, null, 2),
+                    )
+                    // copy the lockfile for extra safety
+                    await fs.promises.copyFile(
+                        path.join(modulesRoot, 'package-lock.json'),
+                        path.join(artifactDir, 'package-lock.json'),
+                    )
+
+                    if (Object.keys(foundExternals).length > 0) {
+                        if (packager === 'bun') {
+                            promises.push(
+                                pLimit(() => {
+                                    console.log(`Installing dependencies for ${artifactDir}`)
+                                    return new Promise((resolve, reject) => {
+                                        const p = child_process.exec(
+                                            'bun install --production --frozen-lockfile',
+                                            { cwd: artifactDir },
+                                            (err, stdout) => (err ? reject(err) : resolve(stdout)),
+                                        )
+                                        p.on('error', reject)
+                                    })
+                                }),
                             )
-                            p.on('error', reject)
-                        })
-                    } else {
-                        await new Promise((resolve, reject) => {
-                            const p = child_process.exec(
-                                'npm ci --omit=dev --omit=optional',
-                                { cwd: artifactDir },
-                                (err, stdout) => (err ? reject(err) : resolve(stdout)),
+                        } else {
+                            promises.push(
+                                pLimit(() => {
+                                    console.log(`Installing dependencies for ${artifactDir}`)
+                                    return new Promise((resolve, reject) => {
+                                        const p = child_process.exec(
+                                            'npm ci --omit=dev --omit=optional --ignore-script',
+                                            { cwd: artifactDir },
+                                            (err, stdout) => (err ? reject(err) : resolve(stdout)),
+                                        )
+                                        p.on('error', reject)
+                                    })
+                                }),
                             )
-                            p.on('error', reject)
-                        })
+                        }
                     }
                 }
+                await Promise.all(promises)
             })
         },
     }
