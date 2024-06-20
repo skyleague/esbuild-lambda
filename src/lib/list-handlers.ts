@@ -35,7 +35,7 @@ export async function* listLambdaHandlersGenerator(
             // and formatting
             if (
                 contents.match(
-                    /export\s+(?:default\s+)?(?:async\s+)?function\s+handler\s*\(|export\s+const\s+handler\s*=\s*|export\s*\{[^}]*\bhandler\b[^}]*\}(?:\s*from\s*['"][^'"]+['"])?\s*;?|module\.exports\.handler\s*=\s*handler\s*;?/,
+                    /export\s+(?:default\s+)?(?:async\s+)?function\s+handler\s*\(|export\s+const\s+handler\s*=\s*|export\s*\{\s*handler\s*(?:,\s*\w+\s*)?\}(?:\s*from\s*['"][^'"]+['"])?\s*;?|module\.exports\.handler\s*=\s*handler\s*;?/,
                 )
             ) {
                 yield dir
