@@ -44,6 +44,8 @@ export function lambdaExternalsPlugin({
             const externals: Record<string, Record<string, string>> = {}
             const bundled: Record<string, Record<string, string>> = {}
 
+            const packageCache = new Map<string, Promise<string>>()
+
             compiler.onResolve({ namespace: 'file', filter: /.*/ }, async (args) => {
                 if (args.path.startsWith('.')) {
                     // relative import's don't need to be added to the package.json
@@ -76,23 +78,31 @@ export function lambdaExternalsPlugin({
 
                 // Finally, it it's NEITHER a relative import NOR a node built-in libary, determine the relevant version for the Lambda handler
                 try {
+                    const packagePath = getImportPath(path.join(modulesRoot, 'node_modules', packageName, 'package.json'))
+                    if (packageCache.has(packagePath) === false) {
+                        packageCache.set(
+                            packagePath,
+                            import(packagePath, {
+                                with: { type: 'json' },
+                            }).then((res) => (res.default ?? res).version),
+                        )
+                    }
                     // biome-ignore lint/style/noNonNullAssertion: we know this is safe
-                    register[args.importer]![packageName] ??= await import(
-                        getImportPath(path.join(modulesRoot, 'node_modules', packageName, 'package.json')),
-                        {
-                            with: { type: 'json' },
-                        }
-                    ).then((res) => (res.default ?? res).version)
+                    register[args.importer]![packageName] ??= await packageCache.get(packagePath)!
                 } catch (_err) {
+                    const packagePath = getImportPath(path.join(packageName, 'package.json'))
+                    if (packageCache.has(packagePath) === false) {
+                        packageCache.set(
+                            packagePath,
+                            import(packagePath, {
+                                with: { type: 'json' },
+                            })
+                                .then((res) => (res.default ?? res).version)
+                                .catch(() => undefined),
+                        )
+                    }
                     // biome-ignore lint/style/noNonNullAssertion: we know this is safe
-                    register[args.importer]![packageName] ??= await import(
-                        getImportPath(path.join(packageName, 'package.json')),
-                        {
-                            with: { type: 'json' },
-                        }
-                    )
-                        .then((res) => (res.default ?? res).version)
-                        .catch(() => undefined)
+                    register[args.importer]![packageName] ??= await packageCache.get(packagePath)!
                 }
 
                 if (forceBundled) {
