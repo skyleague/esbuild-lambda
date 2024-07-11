@@ -30,13 +30,13 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@skyleague/axioms": "^4.3.4",
-    "deterministic-zip": "^1.1.0",
+    "@skyleague/axioms": "^4.5.0",
+    "deterministic-zip-ng": "^2.1.1",
     "esbuild": ">=0.21.5"
   },
   "devDependencies": {
-    "@skyleague/node-standards": "^7.1.0",
-    "typescript": "^5.4.5"
+    "@skyleague/node-standards": "^7.3.1",
+    "typescript": "^5.5.2"
   },
   "engines": {
     "node": ">=20"
