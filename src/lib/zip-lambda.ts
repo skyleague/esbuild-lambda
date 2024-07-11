@@ -3,7 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import { parallelLimit } from '@skyleague/axioms'
-import zip from 'deterministic-zip'
+import zip, { type DeterministicZipCallback, type DeterministicZipOption } from 'deterministic-zip-ng'
 import { spawnAsync } from './spawn.js'
 
 const defaultFiles = [
@@ -140,9 +140,16 @@ export async function zipLambda(zipdir: string, fnBuildDir: string, { useFallbac
             },
         )
     }
-    return promisify(zip)(fnBuildDir, `${zipdir}.zip`, {
+    return promisify<string, string, DeterministicZipOption>(
+        zip as unknown as (
+            dir: string,
+            destination: string,
+            options: DeterministicZipOption,
+            callback: DeterministicZipCallback,
+        ) => void,
+    )(fnBuildDir, `${zipdir}.zip`, {
         includes: ['./**'],
-        exclude: _excludes.flatMap((x) => ['-x', `"**/${x}"`]),
+        excludes: _excludes.flatMap((x) => ['-x', `"**/${x}"`]),
         cwd: fnBuildDir,
     })
 }
@@ -154,6 +161,7 @@ export async function initZip() {
             stdio: 'ignore',
         }).catch(() => {
             hasExternalZip = false
+            console.warn('deterministic-zip is not properly working, falling back to internal zip implementation')
         }),
     )
     return hasExternalZip
