@@ -1,11 +1,8 @@
-import { getImportPath, lambdaEntryPlugin, lambdaExternalsPlugin } from '../plugins/index.js'
-
+import path from 'node:path'
 import type { BuildOptions, Plugin } from 'esbuild'
 import { build } from 'esbuild'
-
-import fs from 'node:fs'
-import path from 'node:path'
 import { excludeVendorFromSourceMapPlugin } from '../plugins/exclude-source-map.js'
+import { getImportPath, lambdaEntryPlugin, lambdaExternalsPlugin } from '../plugins/index.js'
 
 interface BuildLambdaOptions {
     root?: string
@@ -35,8 +32,9 @@ export async function esbuildLambda(fnDir: string, options: BuildLambdaOptions):
     const packageJson = await import(getImportPath(process.env.npm_package_json ?? `${root}/package.json`), {
         with: { type: 'json' },
     }).then((res: Record<string, unknown>) => (res.default ?? res) as Record<string, unknown>)
+
     console.time(`${path.relative(root, fnDir)}\ntotal`)
-    await fs.promises.rm(path.join(fnDir, '.build'), { recursive: true }).catch(() => void {})
+
     await build({
         bundle: true,
         sourcemap: true,
