@@ -121,12 +121,12 @@ export function lambdaExternalsPlugin({
                 )) {
                     const foundExternals = Object.fromEntries(
                         Object.keys(value.inputs).flatMap((input) =>
-                            Object.entries(externals[path.join(process.cwd(), input)] ?? {}),
+                            Object.entries(externals[path.join(modulesRoot, input)] ?? {}),
                         ),
                     )
                     const foundBundled = Object.fromEntries(
                         Object.keys(value.inputs).flatMap((input) =>
-                            Object.entries(bundled[path.join(process.cwd(), input)] ?? {}),
+                            Object.entries(bundled[path.join(modulesRoot, input)] ?? {}),
                         ),
                     )
 
