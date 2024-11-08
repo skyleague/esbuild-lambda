@@ -98,7 +98,7 @@ const defaultDirectories = [
 const defaultExtensions = ['.markdown', '.md', '.mkd', '.ts', '.jst', '.coffee', '.tgz', '.swp']
 
 // https://github.com/tj/node-prune/blob/master/internal/prune/prune.go
-const _excludes = [
+const _nodejsExcludes = [
     ...defaultFiles,
     ...defaultDirectories.map((dir) => `**/${dir}/**`),
     ...defaultExtensions.map((ext) => `*${ext}`),
@@ -123,7 +123,21 @@ const _nodeModulesExcludes = [
     'package-lock.json',
 ]
 
-export async function zipLambda(zipdir: string, fnBuildDir: string, { useFallback = true }: { useFallback?: boolean } = {}) {
+const _pythonExcludes = [
+    // Python-specific excludes
+    '**/*.pyc',
+    '**/*.pyo',
+    '**/*.md',
+    '**/*.dist-info/**',
+    '**/__pycache__/**',
+    '**/botocore/**',
+]
+
+export async function zipLambda(
+    zipdir: string,
+    fnBuildDir: string,
+    { useFallback = true, preset = 'nodejs' }: { useFallback?: boolean; preset?: 'nodejs' | 'python' } = {},
+) {
     if (!useFallback) {
         return spawnAsync(
             'deterministic-zip',
@@ -131,8 +145,15 @@ export async function zipLambda(zipdir: string, fnBuildDir: string, { useFallbac
                 `${zipdir}.zip`,
                 '.',
                 '--recurse-paths',
-                ..._excludes.flatMap((x) => ['-x', `"**/${x}"`]),
-                ..._nodeModulesExcludes.flatMap((x) => ['-x', `"node_modules/**/${x}"`]),
+                ...(preset === 'python'
+                    ? [
+                          ..._nodejsExcludes.flatMap((x) => ['-x', `"**/${x}"`]),
+                          ..._pythonExcludes.flatMap((x) => ['-x', `"${x}"`]),
+                      ]
+                    : [
+                          ..._nodejsExcludes.flatMap((x) => ['-x', `"**/${x}"`]),
+                          ..._nodeModulesExcludes.flatMap((x) => ['-x', `"node_modules/**/${x}"`]),
+                      ]),
             ],
             {
                 stdio: 'inherit',
@@ -149,7 +170,7 @@ export async function zipLambda(zipdir: string, fnBuildDir: string, { useFallbac
         ) => void,
     )(fnBuildDir, `${zipdir}.zip`, {
         includes: ['./**'],
-        excludes: _excludes.flatMap((x) => ['-x', `"**/${x}"`]),
+        excludes: preset === 'python' ? _pythonExcludes : _nodejsExcludes.flatMap((x) => ['-x', `"**/${x}"`]),
         cwd: fnBuildDir,
     })
 }
@@ -173,6 +194,7 @@ export async function zipHandlers(
         outbase,
         artifactDir,
         buildDir,
+        preset = 'nodejs',
         parallelism = Math.max(os.cpus().length * 2, 4),
         transform,
     }: {
@@ -180,6 +202,7 @@ export async function zipHandlers(
         artifactDir: string
         buildDir: string
         parallelism?: number
+        preset?: 'nodejs' | 'python'
         transform?: (dirs: [fnZipDir: string, fnBuildDir: string]) => [fnZipDir: string, fnBuildDir: string]
     },
 ) {
@@ -204,7 +227,7 @@ export async function zipHandlers(
     await Promise.all(
         directories.map(([fnZipDir, fnBuildDir]) => {
             console.log(`Zipping ${fnZipDir}`)
-            return pLimit(() => zipLambda(fnZipDir, fnBuildDir, { useFallback: !hasExternalZip }))
+            return pLimit(() => zipLambda(fnZipDir, fnBuildDir, { useFallback: !hasExternalZip, preset }))
         }),
     )
 }
