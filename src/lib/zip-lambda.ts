@@ -138,12 +138,15 @@ function getPythonRuntimeExcludes(runtime?: string) {
 
     // Exclude all .so files except those matching our runtime
     return [
-        // Exclude all .so files that don't match our version
-        `**/*.cpython-!(${version})-*.so`,
-        // Also exclude specific architectures we don't need
-        // Add more patterns as needed for different architectures
-        ...(runtime.includes('python3') ? [`**/*.cpython-${version}-!(aarch64|x86_64)-*.so`] : []),
-    ]
+        // Exclude all .so files for other Python versions
+        '**/*.cpython-37*.so',
+        '**/*.cpython-38*.so',
+        '**/*.cpython-39*.so',
+        '**/*.cpython-310*.so',
+        '**/*.cpython-311*.so',
+        '**/*.cpython-312*.so',
+        '**/*.cpython-313*.so',
+    ].filter((pattern) => !pattern.includes(`cpython-${version}`))
 }
 
 const _pythonExcludes = [
