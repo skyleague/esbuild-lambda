@@ -101,6 +101,7 @@ const defaultExtensions = ['.markdown', '.md', '.mkd', '.ts', '.jst', '.coffee',
 const _nodejsExcludes = [
     ...defaultFiles,
     ...defaultDirectories.map((dir) => `**/${dir}/**`),
+    ...defaultDirectories.map((dir) => `${dir}/**`),
     ...defaultExtensions.map((ext) => `*${ext}`),
     // '**/@aws-sdk/**',
     // '**/@smithy/**',
@@ -123,21 +124,57 @@ const _nodeModulesExcludes = [
     'package-lock.json',
 ]
 
+const _pythonDirectoriesExcludes = ['*.dist-info', '__pycache__', 'botocore']
+
+// Add new function to generate Python runtime-specific excludes
+function getPythonRuntimeExcludes(runtime?: string) {
+    // If no runtime specified, don't exclude any .so files
+    if (!runtime) {
+        return []
+    }
+
+    // Extract version from runtime (e.g., 'python3.10' -> '310')
+    const version = runtime.replace(/[^0-9]/g, '')
+
+    // Exclude all .so files except those matching our runtime
+    return [
+        // Exclude all .so files that don't match our version
+        `**/*.cpython-!(${version})-*.so`,
+        // Also exclude specific architectures we don't need
+        // Add more patterns as needed for different architectures
+        ...(runtime.includes('python3') ? [`**/*.cpython-${version}-!(aarch64|x86_64)-*.so`] : []),
+    ]
+}
+
 const _pythonExcludes = [
+    ...defaultExtensions.map((ext) => `*${ext}`),
     // Python-specific excludes
-    '**/*.pyc',
-    '**/*.pyo',
-    '**/*.md',
-    '**/*.dist-info/**',
-    '**/__pycache__/**',
-    '**/botocore/**',
+    ..._pythonDirectoriesExcludes.map((dir) => `**/${dir}/**`),
+    ..._pythonDirectoriesExcludes.map((dir) => `${dir}/**`),
+    '*.pyc',
+    '*.pyo',
 ]
+
+// Add supported Python runtime types
+type PythonRuntime = 'python3.7' | 'python3.8' | 'python3.9' | 'python3.10' | 'python3.11' | 'python3.12'
+
+// Update the type to include both Node.js and Python runtimes
+type Runtime = 'nodejs18.x' | 'nodejs20.x' | PythonRuntime
 
 export async function zipLambda(
     zipdir: string,
     fnBuildDir: string,
-    { useFallback = true, preset = 'nodejs' }: { useFallback?: boolean; preset?: 'nodejs' | 'python' } = {},
+    {
+        useFallback = true,
+        runtime,
+    }: {
+        useFallback?: boolean
+        runtime?: Runtime | undefined
+    } = {},
 ) {
+    const isPython = runtime?.startsWith('python')
+    const runtimeExcludes = isPython ? getPythonRuntimeExcludes(runtime) : []
+
     if (!useFallback) {
         return spawnAsync(
             'deterministic-zip',
@@ -145,10 +182,11 @@ export async function zipLambda(
                 `${zipdir}.zip`,
                 '.',
                 '--recurse-paths',
-                ...(preset === 'python'
+                ...(isPython
                     ? [
                           ..._nodejsExcludes.flatMap((x) => ['-x', `"**/${x}"`]),
-                          ..._pythonExcludes.flatMap((x) => ['-x', `"${x}"`]),
+                          ..._pythonExcludes.flatMap((x) => ['-x', x]),
+                          ...runtimeExcludes.flatMap((x) => ['-x', x]),
                       ]
                     : [
                           ..._nodejsExcludes.flatMap((x) => ['-x', `"**/${x}"`]),
@@ -170,7 +208,7 @@ export async function zipLambda(
         ) => void,
     )(fnBuildDir, `${zipdir}.zip`, {
         includes: ['./**'],
-        excludes: preset === 'python' ? _pythonExcludes : _nodejsExcludes.flatMap((x) => ['-x', `"**/${x}"`]),
+        excludes: isPython ? [..._pythonExcludes, ...runtimeExcludes] : _nodejsExcludes.flatMap((x) => ['-x', `"**/${x}"`]),
         cwd: fnBuildDir,
     })
 }
@@ -194,7 +232,7 @@ export async function zipHandlers(
         outbase,
         artifactDir,
         buildDir,
-        preset = 'nodejs',
+        runtime,
         parallelism = Math.max(os.cpus().length * 2, 4),
         transform,
     }: {
@@ -202,7 +240,7 @@ export async function zipHandlers(
         artifactDir: string
         buildDir: string
         parallelism?: number
-        preset?: 'nodejs' | 'python'
+        runtime?: Runtime
         transform?: (dirs: [fnZipDir: string, fnBuildDir: string]) => [fnZipDir: string, fnBuildDir: string]
     },
 ) {
@@ -227,7 +265,7 @@ export async function zipHandlers(
     await Promise.all(
         directories.map(([fnZipDir, fnBuildDir]) => {
             console.log(`Zipping ${fnZipDir}`)
-            return pLimit(() => zipLambda(fnZipDir, fnBuildDir, { useFallback: !hasExternalZip, preset }))
+            return pLimit(() => zipLambda(fnZipDir, fnBuildDir, { useFallback: !hasExternalZip, runtime }))
         }),
     )
 }
