@@ -124,7 +124,7 @@ const _nodeModulesExcludes = [
     'package-lock.json',
 ]
 
-const _pythonDirectoriesExcludes = ['*.dist-info', '__pycache__', 'botocore']
+const _pythonDirectoriesExcludes = ['*.dist-info', '__pycache__', 'botocore', 'boto3']
 
 // Add new function to generate Python runtime-specific excludes
 function getPythonRuntimeExcludes(runtime?: string) {
