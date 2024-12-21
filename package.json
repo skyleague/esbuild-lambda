@@ -24,22 +24,22 @@
     "check:project": "node-standards lint",
     "check:types": "tsc -p tsconfig.json",
     "lint": "biome check",
-    "lint:fix": "npm run lint -- --write --unsafe",
-    "package": "rm -rf .dist && npm run build",
+    "lint:fix": "node --run lint -- --write --unsafe",
+    "package": "rm -rf .dist && node --run build",
     "prepare": "husky || true",
     "test": "vitest run"
   },
   "dependencies": {
-    "@skyleague/axioms": "^4.5.0",
+    "@skyleague/axioms": "^6.1.0",
     "deterministic-zip-ng": "^2.1.1",
-    "esbuild": ">=0.21.5"
+    "esbuild": ">=0.24.0"
   },
   "devDependencies": {
-    "@skyleague/node-standards": "^7.3.1",
-    "typescript": "^5.5.2"
+    "@skyleague/node-standards": "^9.4.0",
+    "typescript": "^5.7.2"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "publishConfig": {
     "access": "public",
